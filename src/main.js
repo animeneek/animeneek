@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, shell, session, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 
@@ -117,6 +118,25 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('open-external', (_e, url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
   createWindow();
+    // AnimeNeek automatic updates
+  if (app.isPackaged) {
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+
+    autoUpdater.on('error', error => {
+      console.error('AnimeNeek update error:', error);
+    });
+
+    autoUpdater.on('update-downloaded', info => {
+      console.log('AnimeNeek update downloaded:', info.version);
+    });
+
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch(error => {
+        console.error('AnimeNeek update check failed:', error);
+      });
+    }, 5000);
+  }
   app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createWindow(); });
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

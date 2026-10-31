@@ -1,7 +1,7 @@
 {
   "name": "animeneek",
   "productName": "AnimeNeek",
-  "version": "1.26.110101",
+  "version": "1.26.110102",
   "description": "AnimeNeek - anime browser and player",
   "author": "AnimeNeek <animeneek@example.com>",
   "homepage": "https://github.com/animeneek/animeneek",
@@ -12,8 +12,8 @@
     "dist": "electron-builder --publish never"
   },
   "devDependencies": {
-    "electron": "^33.2.0",
-    "electron-builder": "^25.1.8"
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0"
   },
   "build": {
     "appId": "com.animeneek.app",
@@ -44,9 +44,20 @@
       ],
       "category": "AudioVideo",
       "maintainer": "AnimeNeek <animeneek@example.com>"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "animeneek",
+        "repo": "animeneek"
+      }
+    ]
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^6.5.2"
+    "@fortawesome/fontawesome-free": "^6.5.2",
+    "electron-updater": "^6.8.11"
+  },
+  "overrides": {
+  "minimatch": "11.0.3"
   }
 }
