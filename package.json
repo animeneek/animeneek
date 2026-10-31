@@ -1,7 +1,7 @@
 {
   "name": "animeneek",
   "productName": "AnimeNeek",
-  "version": "1.26.110104",
+  "version": "1.26.110105",
   "description": "AnimeNeek - anime browser and player",
   "author": "AnimeNeek <animeneek@example.com>",
   "homepage": "https://github.com/animeneek/animeneek",
@@ -28,7 +28,8 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "mac": {
       "target": [
