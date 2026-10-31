@@ -21,16 +21,6 @@ The app expects this structure:
 
 ```json
 {
-  "63159": {
-    "1": {
-      "Sub - Cen": "https://streamtape.to/e/example"
-    },
-    "2": {
-      "Sub - Cen": "https://streamtape.to/e/example2",
-      "Sub - Uncen": "https://streamtape.to/e/example3",
-      "Dub": "https://streamtape.to/e/example4"
-    }
-  }
 }
 ```
 
