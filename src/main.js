@@ -66,6 +66,7 @@ app.on('web-contents-created', (_e, wc) => {
 
 function createWindow() {
   const win = new BrowserWindow({
+    icon: path.join(__dirname, 'icon.png'),
     width: 1280, height: 800, minWidth: 480, minHeight: 560,
     backgroundColor: '#000000', autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
