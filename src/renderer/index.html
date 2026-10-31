@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-src https:; connect-src 'none'">
+<title>AnimeNeek</title><link rel="stylesheet" href="../../node_modules/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="style.css"></head>
+<body>
+<header>
+  <div class="logo" id="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2.5 5l7 3.2L12 18l2.5-9.8 7-3.2-4.2 9.2L12 20.5l-5.3-6.3z"/></svg><span>AnimeNeek</span></div>
+  <nav><a data-go="home">Home</a><a data-go="browse">Anime</a><a data-go="favorites">My List</a><a data-go="history">History</a></nav>
+  <div class="srch"><input id="search" type="search" placeholder="Search anime…"><button class="icon" id="sbtn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button></div>
+  <div id="who"></div>
+</header>
+<main id="view"></main>
+<footer><div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2.5 5l7 3.2L12 18l2.5-9.8 7-3.2-4.2 9.2L12 20.5l-5.3-6.3z"/></svg><span>AnimeNeek</span></div><div class="tl">Anime. Anytime. Anywhere.</div><div class="cp">© 2026 NEEK. All rights reserved.</div></footer>
+<div id="auth" class="hidden"></div>
+<div id="modal" class="hidden"></div>
+<script type="module" src="app.js"></script>
+</body></html>
