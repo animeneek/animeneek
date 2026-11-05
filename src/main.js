@@ -37,19 +37,51 @@ async function anilist(query, variables) {
   const key = 'a:' + query + JSON.stringify(variables || {});
   const hit = fresh(key, ANILIST_TTL);
   if (hit) return hit;
+
+  let lastError;
+
   for (let i = 0; i < 3; i++) {
-    const r = await fetch('https://graphql.anilist.co', {
-      method: 'POST', signal: AbortSignal.timeout(15000),
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables })
-    });
-    if (r.status === 429) { await sleep(2000 * (i + 1)); continue; }
-    const j = await r.json();
-    if (j.errors) throw new Error(j.errors[0].message);
-    cache[key] = { t: Date.now(), d: j.data }; saveCache();
-    return j.data;
+    try {
+      const r = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        signal: AbortSignal.timeout(30000),
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({ query, variables })
+      });
+
+      if (r.status === 429 || r.status >= 500) {
+        lastError = new Error('AniList HTTP ' + r.status);
+        await sleep(2000 * (i + 1));
+        continue;
+      }
+
+      if (!r.ok) {
+        throw new Error('AniList HTTP ' + r.status);
+      }
+
+      const j = await r.json();
+
+      if (j.errors) {
+        throw new Error(j.errors[0].message);
+      }
+
+      cache[key] = { t: Date.now(), d: j.data };
+      saveCache();
+      return j.data;
+
+    } catch (error) {
+      lastError = error;
+
+      if (i < 2) {
+        await sleep(1500 * (i + 1));
+      }
+    }
   }
-  throw new Error('AniList is busy, try again shortly');
+
+  throw new Error('AniList request failed after 3 attempts: ' + (lastError?.message || 'Unknown error'));
 }
 
 
@@ -119,25 +151,84 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('open-external', (_e, url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); });
   createWindow();
-    // AnimeNeek automatic updates
-  if (app.isPackaged) {
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
-
-    autoUpdater.on('error', error => {
-      console.error('AnimeNeek update error:', error);
-    });
-
-    autoUpdater.on('update-downloaded', info => {
-      console.log('AnimeNeek update downloaded:', info.version);
-    });
-
-    setTimeout(() => {
-      autoUpdater.checkForUpdates().catch(error => {
-        console.error('AnimeNeek update check failed:', error);
-      });
-    }, 5000);
+// AnimeNeek update management
+function sendUpdateStatus(status) {
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('update-status', status);
   }
+}
+
+ipcMain.handle('app-version', () => app.getVersion());
+
+ipcMain.handle('check-updates', async () => {
+  if (!app.isPackaged) {
+    sendUpdateStatus({
+      state: 'unavailable',
+      message: 'Updates are available in installed builds only.'
+    });
+    return { state: 'unavailable' };
+  }
+
+  try {
+    sendUpdateStatus({ state: 'checking', message: 'Checking for updates...' });
+    await autoUpdater.checkForUpdates();
+    return { state: 'checking' };
+  } catch (error) {
+    sendUpdateStatus({ state: 'error', message: error.message });
+    return { state: 'error' };
+  }
+});
+
+ipcMain.handle('install-update', () => autoUpdater.quitAndInstall());
+
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+
+autoUpdater.on('checking-for-update', () => {
+  sendUpdateStatus({ state: 'checking', message: 'Checking for updates...' });
+});
+
+autoUpdater.on('update-available', info => {
+  sendUpdateStatus({
+    state: 'available',
+    message: `Update ${info.version} found. Downloading...`
+  });
+});
+
+autoUpdater.on('update-not-available', () => {
+  sendUpdateStatus({
+    state: 'latest',
+    message: 'You are using the latest version.'
+  });
+});
+
+autoUpdater.on('download-progress', progress => {
+  sendUpdateStatus({
+    state: 'downloading',
+    message: `Downloading update... ${Math.round(progress.percent)}%`
+  });
+});
+
+autoUpdater.on('update-downloaded', info => {
+  sendUpdateStatus({
+    state: 'downloaded',
+    message: `Version ${info.version} is ready to install.`
+  });
+});
+
+autoUpdater.on('error', error => {
+  console.error('AnimeNeek update error:', error);
+  sendUpdateStatus({ state: 'error', message: error.message });
+});
+
+if (app.isPackaged) {
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(error => {
+      console.error('AnimeNeek update check failed:', error);
+    });
+  }, 5000);
+}
   app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createWindow(); });
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

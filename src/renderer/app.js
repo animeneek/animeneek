@@ -1,4 +1,5 @@
 import provider from './provider.js';
+import './mobile-api.js';
 import { LANDING_IMAGE, REMOTE_CONFIG_URL } from './config.js';
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const view = $('#view');
@@ -318,17 +319,165 @@ function bindRemove() {
 let homeN = 0;
 const FULL = new Set(['home', 'anime']);
 let cur = ['home'], tok = 0, timers = [], curM = null;
-async function go(route, arg) {
-  cur = [route, arg]; const my = ++tok; timers.forEach(clearInterval); timers = [];
-  document.body.dataset.page = route; $('.srch').classList.remove('open');
-  $$('nav a').forEach(a => a.classList.toggle('on', a.dataset.go === route));
-  view.classList.remove('in'); view.innerHTML = loader;
-  try {
-    const html = await routes[route](arg); if (my !== tok) return;
-    view.innerHTML = FULL.has(route) ? html : `<div class="wrap">${html}</div>`; void view.offsetWidth; view.classList.add('in'); after[route]?.(arg, my);
-    document.scrollingElement.scrollTop = 0;
-  } catch (e) { if (my === tok) { view.innerHTML = `<div class="msg">Something went wrong: ${esc(e.message)}<br><br><button class="ghost" id="retry">Try again</button></div>`; view.classList.add('in'); $('#retry').onclick = () => go(...cur); } }
+
+// Mini-player state
+let floatingPlayer = null;
+let floatingPlayerInfo = null;
+
+// Move the existing video into the floating player
+function movePlayerToMini() {
+  const frame = view.querySelector('.frame iframe');
+  if (!frame) return;
+
+  floatingPlayer = frame;
+  floatingPlayerInfo = cur[1];
+
+  const mini = document.getElementById('mini-player');
+  const video = document.getElementById('mini-player-video');
+  const title = document.getElementById('mini-player-title');
+
+  title.textContent = `AnimeNeek · Episode ${floatingPlayerInfo.ep}`;
+  video.appendChild(frame);
+  mini.hidden = false;
 }
+
+// Restore the existing video to the full player
+function restorePlayerFromMini() {
+  if (!floatingPlayer) return;
+
+  const frame = view.querySelector('.frame');
+  if (!frame) return;
+
+  frame.innerHTML = '';
+  frame.appendChild(floatingPlayer);
+
+  floatingPlayer = null;
+  floatingPlayerInfo = null;
+  document.getElementById('mini-player').hidden = true;
+}
+
+// Main navigation
+async function go(route, arg) {
+  // Keep playback alive when leaving the player page
+  if (cur[0] === 'player' && route !== 'player') {
+    movePlayerToMini();
+  }
+
+  cur = [route, arg];
+  const my = ++tok;
+  timers.forEach(clearInterval);
+  timers = [];
+
+  document.body.dataset.page = route;
+  $('.srch').classList.remove('open');
+  $$('nav a').forEach(a => a.classList.toggle('on', a.dataset.go === route));
+
+  view.classList.remove('in');
+  view.innerHTML = loader;
+
+  try {
+    const html = await routes[route](arg);
+    if (my !== tok) return;
+
+    view.innerHTML = FULL.has(route) ? html : `<div class="wrap">${html}</div>`;
+    void view.offsetWidth;
+    view.classList.add('in');
+
+    if (route === 'player' && floatingPlayer) {
+  const sameEpisode =
+    floatingPlayerInfo &&
+    Number(floatingPlayerInfo.id) === Number(arg.id) &&
+    Number(floatingPlayerInfo.ep) === Number(arg.ep) &&
+    floatingPlayerInfo.audio === arg.audio;
+
+  if (sameEpisode) {
+    restorePlayerFromMini();
+  } else {
+    floatingPlayer.remove();
+    floatingPlayer = null;
+    floatingPlayerInfo = null;
+    miniVideo.innerHTML = '';
+    miniPlayer.hidden = true;
+  }
+}
+
+    after[route]?.(arg, my);
+
+    document.scrollingElement.scrollTop = 0;
+  } catch (e) {
+    if (my === tok) {
+      view.innerHTML = `<div class="msg">Something went wrong: ${esc(e.message)}<br><br><button class="ghost" id="retry">Try again</button></div>`;
+      view.classList.add('in');
+      $('#retry').onclick = () => go(...cur);
+    }
+  }
+}
+
+
+// Mini-player controls
+const miniPlayer = document.getElementById('mini-player');
+const miniVideo = document.getElementById('mini-player-video');
+const miniHeader = document.querySelector('.mini-player-header');
+
+document.getElementById('mini-close').onclick = () => {
+  if (floatingPlayer) {
+    floatingPlayer.remove();
+    floatingPlayer = null;
+    floatingPlayerInfo = null;
+  }
+
+  miniVideo.innerHTML = '';
+  miniPlayer.hidden = true;
+};
+
+document.getElementById('mini-expand').onclick = () => {
+  if (floatingPlayerInfo) {
+    go('player', floatingPlayerInfo);
+  }
+};
+
+// Allow the mini-player to be dragged
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+miniHeader.addEventListener('pointerdown', event => {
+  if (event.target.closest('button')) return;
+
+  const rect = miniPlayer.getBoundingClientRect();
+
+  dragOffsetX = event.clientX - rect.left;
+  dragOffsetY = event.clientY - rect.top;
+
+  miniPlayer.style.left = `${rect.left}px`;
+  miniPlayer.style.top = `${rect.top}px`;
+  miniPlayer.style.right = 'auto';
+  miniPlayer.style.bottom = 'auto';
+
+  miniHeader.setPointerCapture(event.pointerId);
+});
+
+miniHeader.addEventListener('pointermove', event => {
+  if (!miniHeader.hasPointerCapture(event.pointerId)) return;
+
+  const x = Math.max(0, Math.min(
+    window.innerWidth - miniPlayer.offsetWidth,
+    event.clientX - dragOffsetX
+  ));
+
+  const y = Math.max(0, Math.min(
+    window.innerHeight - miniPlayer.offsetHeight,
+    event.clientY - dragOffsetY
+  ));
+
+  miniPlayer.style.left = `${x}px`;
+  miniPlayer.style.top = `${y}px`;
+});
+
+miniHeader.addEventListener('pointerup', event => {
+  if (miniHeader.hasPointerCapture(event.pointerId)) {
+    miniHeader.releasePointerCapture(event.pointerId);
+  }
+});
 
 // ---------- browse filters ----------
 const defF = () => ({ q: '', genres: [], format: '', year: '', season: '', status: '', sort: 'POPULARITY_DESC', score: 0 });
@@ -379,6 +528,68 @@ const routes = {
     const h = store.get('history', []);
     return `<h1 class="ptitle serif">History</h1><p class="sub">Pick up where you left off.</p>${h.length ? `<div class="grid">${h.map((x, i) => card({ ...x, _b: 'EP ' + x.ep }, i, true)).join('')}</div><br><button class="ghost" id="clear">Clear all history</button>` : '<div class="msg">No history yet.</div>'}`;
   },
+    async settings() {
+  return `
+    <div class="settings-page">
+      <h1 class="ptitle serif">Settings</h1>
+      <p class="sub">Make AnimeNeek yours.</p>
+
+      <section class="glass settings-card">
+        <div class="settings-heading">
+          <h2>Application</h2>
+          <span class="meta">APP & UPDATES</span>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <b>Installed Version</b>
+            <p class="meta">Your current AnimeNeek version</p>
+          </div>
+          <span class="settings-value" id="app-version">Loading...</span>
+        </div>
+
+        <div class="settings-actions">
+          <button class="ghost" id="check-updates">Check for Updates</button>
+          <button class="cream" id="install-update" hidden>Restart to Install</button>
+        </div>
+
+        <p class="meta settings-status" id="update-status">Automatic updates enabled.</p>
+      </section>
+
+      <section class="glass settings-card">
+        <div class="settings-heading">
+          <h2>Playback</h2>
+          <span class="meta">WATCH PREFERENCES</span>
+        </div>
+
+        <label class="settings-toggle">
+          <span>
+            <b>Automatically play next episode</b>
+            <small class="meta">Continue to the next episode automatically</small>
+          </span>
+          <input type="checkbox" id="autoplay-next" checked>
+        </label>
+
+        <label class="settings-toggle">
+          <span>
+            <b>Remember playback position</b>
+            <small class="meta">Resume where you left off when supported</small>
+          </span>
+          <input type="checkbox" id="resume-playback" checked>
+        </label>
+      </section>
+
+      <section class="glass settings-card">
+        <div class="settings-heading">
+          <h2>About AnimeNeek</h2>
+          <span class="meta">ABOUT</span>
+        </div>
+        <p class="meta">Anime. Anytime. Anywhere.</p>
+        <p class="meta">AnimeNeek — Your anime experience.</p>
+      </section>
+    </div>
+  `;
+},
   async anime(id) {
     const m = curM = await getMedia(id), last = store.get('history', []).find(h => h.id === id), soon = m.status === 'NOT_YET_RELEASED', rp = relParts(m), st = m.studios?.nodes?.map(s => s.name).join(', ');
     return `<section class="dhero" style="background-image:linear-gradient(90deg,#000 6%,#000000c8 42%,#00000040),linear-gradient(0deg,#000 2%,#00000000 45%),url('${esc(m.bannerImage || m.coverImage.large)}')">${m.isAdult ? RIBBON : ''}<div class="hc"><div class="eyebrow"><i></i>${m.format === 'MOVIE' ? 'Movie' : 'Series'}${m.isAdult ? ' · 18+' : ''}</div><h1 class="serif">${esc(name(m))}</h1>
@@ -436,12 +647,72 @@ async function moreSections(my) { // extra rows load after the page is already o
     $$('.all', el).forEach(b => b.onclick = () => { filters = { ...defF(), genres: [b.dataset.g] }; go('browse'); });
   }
 }
+function applyAnimeNeekTheme(theme) {
+  const selected = theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    : theme;
+
+  document.body.dataset.theme = selected;
+}
 const after = {
+    settings() {
+  const version = $('#app-version');
+  const status = $('#update-status');
+  const check = $('#check-updates');
+  const install = $('#install-update');
+  const autoplay = $('#autoplay-next');
+  const resume = $('#resume-playback');
+
+  window.api.appVersion()
+    .then(v => { version.textContent = 'v' + v; })
+    .catch(() => { version.textContent = 'Unavailable'; });
+
+  autoplay.checked = localStorage.getItem('animeneek-autoplay') !== 'false';
+  resume.checked = localStorage.getItem('animeneek-resume') !== 'false';
+
+  autoplay.onchange = () => {
+    localStorage.setItem('animeneek-autoplay', autoplay.checked);
+  };
+
+  resume.onchange = () => {
+    localStorage.setItem('animeneek-resume', resume.checked);
+  };
+
+  window.api.onUpdateStatus(update => {
+    status.textContent = update.message || 'Update status changed.';
+    install.hidden = update.state !== 'downloaded';
+    check.disabled = update.state === 'checking' || update.state === 'downloading';
+    check.textContent = check.disabled ? 'Please wait...' : 'Check for Updates';
+  });
+
+  check.onclick = async () => {
+    check.disabled = true;
+    check.textContent = 'Checking...';
+    status.textContent = 'Checking for updates...';
+
+    try {
+      await window.api.checkUpdates();
+    } catch (error) {
+      status.textContent = error.message || 'Unable to check for updates.';
+      check.disabled = false;
+      check.textContent = 'Check for Updates';
+    }
+  };
+
+  install.onclick = () => window.api.installUpdate();
+},
   home(_, my) {
     bindCards(); bindRows(); moreSections(my); const sl = $$('.slide'), dots = $$('.dots i'); let n = 0;
     const show = i => { n = i; sl.forEach((s, j) => s.classList.toggle('on', j === i)); dots.forEach((d, j) => d.classList.toggle('on', j === i)); };
     dots.forEach((d, i) => d.onclick = () => show(i)); if (sl.length > 1) timers.push(setInterval(() => show((n + 1) % sl.length), 7000));
-    $$('[data-watch]').forEach(b => b.onclick = e => { e.stopPropagation(); go('player', { id: +b.dataset.watch, ep: 1, audio: 'sub' }); });
+    $$('[data-watch]').forEach(b => b.onclick = e => {
+  e.stopPropagation();
+  go('player', {
+    id: +b.dataset.watch,
+    ep: 1,
+    audio: localStorage.getItem('animeneek-default-audio') || 'sub'
+  });
+});
     $$('.slide [data-id]').forEach(b => b.onclick = () => go('anime', +b.dataset.id));
     $$('[data-resume]').forEach(c => c.onclick = () => { const [ep, audio] = c.dataset.resume.split('|'); go('player', { id: +c.dataset.id, ep: +ep, audio }); });
     bindRemove();
@@ -467,11 +738,18 @@ const after = {
   history() { bindCards(); bindRemove(); $('#clear')?.addEventListener('click', () => { store.set('history', []); go('history'); }); },
   anime(id, my) {
     const m = curM; bindCards(); bindTabs();
-    $('#play').onclick = () => { const h = store.get('history', []).find(x => x.id === id); go('player', { id, ep: h?.ep || 1, audio: h?.audio || 'sub' }); };
+    $('#play').onclick = () => { const h = store.get('history', []).find(x => x.id === id); go('player', {
+  id,
+  ep: h?.ep || 1,
+  audio: localStorage.getItem('animeneek-default-audio') || h?.audio || 'sub'
+}); };
     $('#fav').onclick = () => { $('#fav').innerHTML = favLabel(toggleFav(m)); };
     const box = $('#eps');
     const paint = eps => {
-      epPanel(box, eps, m, 0, n => go('player', { id, ep: n, audio: 'sub' }));
+      epPanel(box, eps, m, 0, n => go('player', {
+  id, ep: n,
+  audio: localStorage.getItem('animeneek-default-audio') || 'sub'
+}));
       const seen = new Set(store.get('seen', {})[id] || []), pl = eps.filter(e => e.mal_id <= aired(m)), n = pl.filter(e => seen.has(e.mal_id)).length;
       $('#prog').innerHTML = pl.length ? `<div class="bar2"><i style="width:${n / pl.length * 100}%"></i></div><small>${n} of ${pl.length} watched</small>` : '<small>Not aired yet</small>';
     };
@@ -482,7 +760,17 @@ const after = {
     const m = curM; bindCards(); bindTabs();
     $('#back').onclick = () => go('anime', id);
     $('#prev').onclick = () => go('player', { id, ep: ep - 1, audio }); $('#next').onclick = () => go('player', { id, ep: ep + 1, audio });
-    $$('[data-audio]').forEach(b => b.onclick = () => b.dataset.audio !== $('.seg button.on')?.dataset.audio && go('player', { id, ep, audio: b.dataset.audio }));
+    $$('[data-audio]').forEach(b => b.onclick = () => {
+  const selected = b.dataset.audio;
+
+  if (selected === 'sub' || selected === 'dub') {
+    localStorage.setItem('animeneek-default-audio', selected);
+  }
+
+  if (selected !== $('.seg button.on')?.dataset.audio) {
+    go('player', { id, ep, audio: selected });
+  }
+});
     $('#fav2').onclick = () => { $('#fav2').innerHTML = favLabel(toggleFav(m)); };
     const synP = m.idMal ? jk(`/anime/${m.idMal}/episodes/${ep}`) : Promise.resolve(null), box = $('#eps');
     const paint = eps => {

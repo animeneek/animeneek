@@ -173,3 +173,255 @@ html[data-fx=sharp] .sec::after{letter-spacing:0}
 .bar .source-options .source-btn.on{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 3px 14px color-mix(in srgb,var(--red) 22%,transparent)}
 .bar .source-options .source-btn.extra{font-weight:600;letter-spacing:0}
 @media(max-width:600px){.bar .source-options{width:100%;order:0}.bar .source-options .source-btn{min-height:36px;padding:7px 13px}.bar .sp{display:none}}
+
+/* AnimeNeek Settings */
+.settings-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.settings-card {
+  padding: 24px;
+  margin-bottom: 18px;
+}
+
+.settings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.settings-heading h2 {
+  margin: 0;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.settings-heading > span {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  opacity: .65;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 0;
+}
+
+.settings-row p,
+.settings-toggle .meta {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+
+.settings-value {
+  color: var(--red2);
+  font-size: 13px;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.settings-status {
+  margin: 14px 0 0;
+  min-height: 20px;
+}
+
+.settings-select {
+  min-width: 125px;
+  padding: 9px 12px;
+  border: 1px solid var(--line2);
+  border-radius: 9px;
+  color: var(--text);
+  background: var(--panel);
+}
+
+.settings-select option {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.settings-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 15px 0;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.settings-toggle:first-of-type {
+  border-top: 0;
+}
+
+.settings-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-toggle input {
+  accent-color: var(--red);
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .settings-card {
+    padding: 18px;
+  }
+
+  .settings-heading {
+    align-items: flex-start;
+  }
+
+  .settings-row {
+    align-items: flex-start;
+  }
+}
+
+/* AnimeNeek Light Theme */
+body[data-theme="light"] {
+  --bg: #f4f3f1;
+  --panel: #ffffff;
+  --line: #00000012;
+  --line2: #00000030;
+  --text: #191919;
+  --dim: #77777f;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body[data-theme="light"] header {
+  background: #ffffffed;
+  border-bottom-color: var(--line);
+}
+
+body[data-theme="light"] header.solid {
+  background: #fffffffa;
+}
+
+body[data-theme="light"] .glass,
+body[data-theme="light"] .settings-card {
+  background: var(--panel);
+  border-color: var(--line);
+}
+
+body[data-theme="light"] input,
+body[data-theme="light"] select,
+body[data-theme="light"] textarea {
+  color: var(--text);
+}
+
+body[data-theme="light"] select option {
+  background: #fff;
+  color: #191919;
+}
+
+body[data-theme="light"] button.ghost {
+  background: #00000008;
+  color: var(--text);
+  border-color: var(--line2);
+}
+
+body[data-theme="light"] .settings-select {
+  background: #fff;
+  color: var(--text);
+  border-color: var(--line2);
+}
+
+body[data-theme="light"] .settings-toggle {
+  border-top-color: var(--line);
+}
+
+body[data-theme="light"] .settings-value {
+  color: var(--red);
+}
+
+/* Floating AnimeNeek mini-player */
+.mini-player {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  z-index: 9999;
+  background: #111;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px #0009;
+}
+
+.mini-player[hidden] {
+  display: none;
+}
+
+.mini-player-header {
+  height: 42px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: move;
+}
+
+.mini-player-header > div {
+  display: flex;
+  gap: 8px;
+}
+
+.mini-player-header button {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+#mini-player-video {
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+#mini-player-video iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+@media (max-width: 600px) {
+  .mini-player {
+    right: 10px;
+    bottom: 72px;
+    width: min(280px, calc(100vw - 20px));
+    border-radius: 10px;
+  }
+
+  .mini-player-header {
+    height: 38px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .mini-player-header button {
+    font-size: 18px;
+    padding: 4px 8px;
+  }
+}
