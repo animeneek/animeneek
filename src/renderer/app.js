@@ -200,12 +200,30 @@ function newProfile(existing = null) {
 async function pick(p, el) {
   const a = $('#auth'); a.classList.add('leaving'); el.classList.add('chosen');
   user = p.id; prof = p.id === 'guest' ? null : p; localStorage.setItem('last', p.id);
-  const pl = pull(p.id); await new Promise(r => setTimeout(r, 850)); await pl;
+
+  // Load cloud data in the background instead of blocking profile entry.
+  pull(p.id).catch(() => {});
+
+  await new Promise(r => setTimeout(r, 320));
   applyTheme(p.theme); who(); a.classList.add('hidden'); go('home');
 }
-async function showProfiles(edit = false) {
+async function showProfiles(edit = false, skipCloudSync = false) {
   applyTheme(); const a = $('#auth'); a.classList.remove('hidden', 'leaving');
-  if (syncDir) { try { const r = await window.api.syncRead('profiles'), l = profiles(); if (Array.isArray(r)) { const m = [...l]; r.forEach(x => { if (x && x.id && !m.some(y => y.id === x.id)) m.push(x); }); if (m.length !== l.length) localStorage.setItem('profiles', JSON.stringify(m)); } } catch { /* ignore */ } }
+  if (syncDir && !skipCloudSync) {
+    window.api.syncRead('profiles').then(r => {
+      if (!Array.isArray(r)) return;
+      const l = profiles(), m = [...l];
+      r.forEach(x => {
+        if (x && x.id && !m.some(y => y.id === x.id)) m.push(x);
+      });
+      if (m.length !== l.length) {
+        localStorage.setItem('profiles', JSON.stringify(m));
+        if (!a.classList.contains('hidden') && a.querySelector('.ptiles')) {
+          showProfiles(edit, true);
+        }
+      }
+    }).catch(() => {});
+  }
   const list = [...profiles(), GUEST];
   ensureScene(a).innerHTML = `${BRAND}<div class="pk"><div class="greet"><i></i>${greeting()}</div><h1 class="serif pk-t">Who's watching?</h1>
     <div class="ptiles ${edit ? 'edit' : ''}">${list.map((p, i) => `<div class="pt" style="--i:${i}" data-id="${esc(p.id)}"><div class="pav" style="${avStyle(p)}">${avInner(p)}${edit && p.id !== 'guest' ? `<button class="pedit" data-edit="${esc(p.id)}" title="Edit profile"><i class="fa-solid fa-pen"></i></button><button class="pdel" data-del="${esc(p.id)}" title="Delete profile"><i class="fa-solid fa-xmark"></i></button>` : ''}</div><span>${esc(p.name)}</span></div>`).join('')}${list.length < 8 ? `<div class="pt add" style="--i:${list.length}"><div class="pav"><i class="fa-solid fa-plus"></i></div><span>Add profile</span></div>` : ''}</div>
@@ -788,4 +806,17 @@ $('#sbtn').onclick = () => { const s = $('.srch'); s.classList.toggle('open'); i
 $('#search').addEventListener('keydown', e => { const q = e.target.value.trim(); if (e.key === 'Escape') $('.srch').classList.remove('open'); if (e.key === 'Enter' && q) { filters = { ...defF(), q, sort: 'SEARCH_MATCH' }; e.target.value = ''; go('browse'); } });
 window.addEventListener('scroll', () => $('header').classList.toggle('solid', scrollY > 30), { passive: true });
 if (REMOTE_CONFIG_URL) window.api.remoteConfig(REMOTE_CONFIG_URL).then(c => c && provider.setBase(c.streamUrl)).catch(() => {});
-(async () => { try { syncDir = await window.api.syncGet(); } catch { /* ignore */ } showProfiles(); })();
+showProfiles();
+
+(async () => {
+  try {
+    syncDir = await window.api.syncGet();
+
+    // Refresh cloud profile information only if the profile screen is still open.
+    if (syncDir && !$('#auth').classList.contains('hidden')) {
+      showProfiles();
+    }
+  } catch {
+    // Continue normally when cloud storage is unavailable.
+  }
+})();
