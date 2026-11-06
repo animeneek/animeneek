@@ -33,16 +33,48 @@ function jikan(p) {
   return job;
 }
 
-async function anilist(query, variables) {
-  const key = 'a:' + query + JSON.stringify(variables || {});
+// AniList: sequential requests, duplicate-request sharing and rate-limit handling
+const ANILIST_GAP_MS = 1100;
+let anilistChain = Promise.resolve();
+let anilistLastRequest = 0;
+let anilistBlockedUntil = 0;
+const anilistInFlight = new Map();
+
+function anilistRetryAfter(response) {
+  const value = response.headers.get('retry-after');
+  if (!value) return null;
+
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * 1000;
+  }
+
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, date - Date.now()) : null;
+}
+
+async function runAniListRequest(query, variables, key) {
   const hit = fresh(key, ANILIST_TTL);
   if (hit) return hit;
 
   let lastError;
 
-  for (let i = 0; i < 3; i++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const waitUntil = Math.max(
+      anilistBlockedUntil,
+      anilistLastRequest + ANILIST_GAP_MS
+    );
+
+    if (waitUntil > Date.now()) {
+      await sleep(waitUntil - Date.now());
+    }
+
+    anilistLastRequest = Date.now();
+
+    let response;
+
     try {
-      const r = await fetch('https://graphql.anilist.co', {
+      response = await fetch('https://graphql.anilist.co', {
         method: 'POST',
         signal: AbortSignal.timeout(30000),
         headers: {
@@ -51,37 +83,97 @@ async function anilist(query, variables) {
         },
         body: JSON.stringify({ query, variables })
       });
-
-      if (r.status === 429 || r.status >= 500) {
-        lastError = new Error('AniList HTTP ' + r.status);
-        await sleep(2000 * (i + 1));
-        continue;
-      }
-
-      if (!r.ok) {
-        throw new Error('AniList HTTP ' + r.status);
-      }
-
-      const j = await r.json();
-
-      if (j.errors) {
-        throw new Error(j.errors[0].message);
-      }
-
-      cache[key] = { t: Date.now(), d: j.data };
-      saveCache();
-      return j.data;
-
     } catch (error) {
-      lastError = error;
+      lastError = new Error(
+        'Network connection failed: ' +
+        (error.cause?.message || error.message || 'Unknown network error')
+      );
 
-      if (i < 2) {
-        await sleep(1500 * (i + 1));
+      if (attempt < 2) {
+        await sleep(2000 * Math.pow(2, attempt));
       }
+      continue;
     }
+
+    if (response.status === 429) {
+      const delay = anilistRetryAfter(response) ??
+        [15000, 30000, 60000][attempt];
+
+      anilistBlockedUntil = Math.max(
+        anilistBlockedUntil,
+        Date.now() + delay
+      );
+
+      lastError = new Error(
+        'AniList rate limit (HTTP 429). Retry after approximately ' +
+        Math.ceil(delay / 1000) + ' seconds.'
+      );
+
+      continue;
+    }
+
+    if (response.status >= 500) {
+      const delay = 3000 * Math.pow(2, attempt);
+      lastError = new Error('AniList server error (HTTP ' + response.status + ').');
+
+      if (attempt < 2) {
+        await sleep(delay);
+      }
+      continue;
+    }
+
+    if (!response.ok) {
+      throw new Error('AniList HTTP ' + response.status);
+    }
+
+    const result = await response.json();
+
+    if (result.errors?.length) {
+      throw new Error(result.errors[0].message || 'AniList GraphQL error');
+    }
+
+    cache[key] = { t: Date.now(), d: result.data };
+    saveCache();
+
+    return result.data;
   }
 
-  throw new Error('AniList request failed after 3 attempts: ' + (lastError?.message || 'Unknown error'));
+  throw new Error(
+    'AniList unavailable after 3 attempts: ' +
+    (lastError?.message || 'Unknown error')
+  );
+}
+
+function anilist(query, variables) {
+  const key = 'a:' + query + JSON.stringify(variables || {});
+
+  const hit = fresh(key, ANILIST_TTL);
+  if (hit) return Promise.resolve(hit);
+
+  const existing = anilistInFlight.get(key);
+  if (existing) return existing;
+
+  const job = anilistChain.then(() =>
+    runAniListRequest(query, variables, key)
+  );
+
+  anilistInFlight.set(key, job);
+  anilistChain = job.catch(() => {});
+
+  job.then(
+    () => {
+      if (anilistInFlight.get(key) === job) {
+        anilistInFlight.delete(key);
+      }
+    },
+    () => {
+      if (anilistInFlight.get(key) === job) {
+        anilistInFlight.delete(key);
+      }
+    }
+  );
+
+  return job;
 }
 
 

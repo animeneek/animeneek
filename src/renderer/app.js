@@ -680,10 +680,21 @@ const after = {
   const install = $('#install-update');
   const autoplay = $('#autoplay-next');
   const resume = $('#resume-playback');
+  const api = window.api;
 
-  window.api.appVersion()
-    .then(v => { version.textContent = 'v' + v; })
-    .catch(() => { version.textContent = 'Unavailable'; });
+  const isElectron = !!api &&
+    typeof api.appVersion === 'function' &&
+    typeof api.checkUpdates === 'function' &&
+    typeof api.installUpdate === 'function' &&
+    typeof api.onUpdateStatus === 'function';
+
+  if (isElectron) {
+    api.appVersion()
+      .then(v => { version.textContent = 'v' + v; })
+      .catch(() => { version.textContent = 'Unavailable'; });
+  } else {
+    version.textContent = 'Web App';
+  }
 
   autoplay.checked = localStorage.getItem('animeneek-autoplay') !== 'false';
   resume.checked = localStorage.getItem('animeneek-resume') !== 'false';
@@ -696,7 +707,14 @@ const after = {
     localStorage.setItem('animeneek-resume', resume.checked);
   };
 
-  window.api.onUpdateStatus(update => {
+  if (!isElectron) {
+    check.hidden = true;
+    install.hidden = true;
+    status.textContent = 'Web app updates automatically. Reopen AnimeNeek to receive the latest version.';
+    return;
+  }
+
+  api.onUpdateStatus(update => {
     status.textContent = update.message || 'Update status changed.';
     install.hidden = update.state !== 'downloaded';
     check.disabled = update.state === 'checking' || update.state === 'downloading';
@@ -709,7 +727,7 @@ const after = {
     status.textContent = 'Checking for updates...';
 
     try {
-      await window.api.checkUpdates();
+      await api.checkUpdates();
     } catch (error) {
       status.textContent = error.message || 'Unable to check for updates.';
       check.disabled = false;
@@ -717,7 +735,7 @@ const after = {
     }
   };
 
-  install.onclick = () => window.api.installUpdate();
+  install.onclick = () => api.installUpdate();
 },
   home(_, my) {
     bindCards(); bindRows(); moreSections(my); const sl = $$('.slide'), dots = $$('.dots i'); let n = 0;

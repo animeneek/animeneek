@@ -1,4 +1,4 @@
-const CACHE_NAME = 'animeneek-pwa-v2';
+const CACHE_NAME = 'animeneek-pwa-v3';
 
 const APP_FILES = [
   './',

@@ -37,6 +37,11 @@
   const initialise = () => {
     if (window.location.protocol === 'https:' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js')
+        .then(registration => {
+          registration.update().catch(error =>
+            console.warn('AnimeNeek update check:', error)
+          );
+        })
         .catch(error => console.error('AnimeNeek service worker:', error));
     }
 
