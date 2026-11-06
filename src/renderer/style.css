@@ -425,3 +425,191 @@ body[data-theme="light"] .settings-value {
     padding: 4px 8px;
   }
 }
+/* =====================================================
+   AnimeNeek Mobile Optimisation
+   ===================================================== */
+
+nav a i {
+    display: none;
+}
+
+.pwa-install {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 7px 13px;
+    gap: 8px;
+}
+
+.pwa-install[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 700px) {
+    nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        height: calc(64px + env(safe-area-inset-bottom));
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        align-items: center;
+        justify-content: initial;
+        gap: 0;
+        background: #08080bf2;
+        border-top: 1px solid var(--line2);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        z-index: 1000;
+    }
+
+    nav a {
+        display: flex;
+        flex: initial;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-width: 0;
+        height: 48px;
+        padding: 0;
+        gap: 0;
+        color: var(--dim);
+        border-radius: 12px;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    nav a span {
+        display: none !important;
+    }
+
+    nav a i {
+        display: block;
+        font-size: 21px;
+        line-height: 1;
+        color: currentColor;
+        transition: color .2s, transform .2s;
+    }
+
+    nav a.on {
+        color: var(--red);
+        background: color-mix(in srgb, var(--red) 12%, transparent);
+    }
+
+    nav a.on i {
+        transform: scale(1.08);
+        filter: drop-shadow(0 0 7px color-mix(in srgb, var(--red) 55%, transparent));
+    }
+
+    nav a.on::after {
+        display: none;
+    }
+
+    body {
+        padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    }
+
+    main {
+        padding-bottom: 12px;
+    }
+
+    footer {
+        padding-bottom: calc(88px + env(safe-area-inset-bottom));
+    }
+
+    .settings-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .settings-row > div {
+        flex: 1 1 65%;
+        min-width: 0;
+    }
+
+    .settings-row .settings-value {
+        margin-left: auto;
+        white-space: nowrap;
+    }
+
+    .settings-toggle {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 24px;
+        align-items: center;
+        gap: 12px;
+        padding: 17px 0;
+    }
+
+    .settings-toggle > span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .settings-toggle input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin: 0;
+        padding: 0;
+        justify-self: end;
+        flex-shrink: 0;
+    }
+
+    .settings-card {
+        overflow: visible;
+    }
+
+    header {
+        gap: 10px;
+    }
+
+    .pwa-install {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .pwa-install span {
+        display: none;
+    }
+
+    .srch.open input {
+        width: min(36vw, 150px);
+    }
+
+    .mini-player {
+        bottom: calc(78px + env(safe-area-inset-bottom));
+    }
+}
+
+@media (max-width: 380px) {
+    header {
+        gap: 6px;
+    }
+
+    .logo {
+        gap: 6px;
+    }
+
+    .logo span {
+        font-size: 14px;
+    }
+
+    nav a i {
+        font-size: 19px;
+    }
+
+    .settings-card {
+        padding: 15px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    nav a i {
+        transition: none;
+    }
+}

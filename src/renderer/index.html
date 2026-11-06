@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-src https:; connect-src 'self' https:">
 <title>AnimeNeek</title>
 <link rel="manifest" href="./manifest.webmanifest">
@@ -12,8 +12,8 @@
 <body>
 <header>
   <div class="logo" id="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2.5 5l7 3.2L12 18l2.5-9.8 7-3.2-4.2 9.2L12 20.5l-5.3-6.3z"/></svg><span>AnimeNeek</span></div>
-  <nav><a data-go="home">Home</a><a data-go="browse">Anime</a><a data-go="favorites">My List</a><a data-go="history">History</a><a data-go="settings">Settings</a></nav>
-  <div class="srch"><input id="search" type="search" placeholder="Search anime&#x2026;"><button class="icon" id="sbtn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button></div>
+  <nav aria-label="Primary navigation"><a data-go="home" aria-label="Home" title="Home"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Home</span></a><a data-go="browse" aria-label="Discover" title="Discover"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Anime</span></a><a data-go="favorites" aria-label="Watchlist" title="Watchlist"><i class="fa-solid fa-bookmark" aria-hidden="true"></i><span>My List</span></a><a data-go="history" aria-label="History" title="History"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span>History</span></a><a data-go="settings" aria-label="Settings" title="Settings"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Settings</span></a></nav>
+  <button class="ghost pwa-install" id="pwa-install" type="button" aria-label="Install AnimeNeek" title="Install AnimeNeek" hidden><i class="fa-solid fa-download" aria-hidden="true"></i><span>Install</span></button><div class="srch"><input id="search" type="search" placeholder="Search anime&#x2026;"><button class="icon" id="sbtn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button></div>
   <div id="who"></div>
 </header>
 <main id="view"></main>
